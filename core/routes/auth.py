@@ -1,28 +1,25 @@
-from typing import Annotated
 from datetime import timedelta
 
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel
 
-from core.database import session
-from core.models import User as UserModelDB
+from sqlalchemy.orm import Session
+
+from core.response_schemas import TokenGetResponse
+from core.services import UserAuthService
 from core.settings import settings
-from core.utils.authenticate_user import authenticate_user
-from core.utils.create_token import create_token
-
-
-class TokenGetResponse(BaseModel):
-    access_token: str
-    token_type: str
-
+from core.utils import get_db_session
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=TokenGetResponse)
-async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    user = authenticate_user(form_data.username, form_data.password, UserModelDB, session)
+async def login(form_data: OAuth2PasswordRequestForm = Depends(),
+                db: Session = Depends(get_db_session)):
+
+    auth_service = UserAuthService(db)
+    user = auth_service.authenticate_user(form_data.username, form_data.password)
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -31,6 +28,6 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
         )
 
     access_token_expires = timedelta(minutes=settings.access_token_expires_in_minutes)
-    token = create_token(user.email, access_token_expires)
+    token = auth_service.create_token(user.email, access_token_expires)
 
     return {'access_token': token, 'token_type': 'bearer'}

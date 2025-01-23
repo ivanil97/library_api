@@ -10,6 +10,7 @@ class BookGetResponse(BaseModel):
     Pydantic-модель, описывающая ответ на получение книги
     """
 
+    id: int
     title: str
     description: str
     publication_date: date

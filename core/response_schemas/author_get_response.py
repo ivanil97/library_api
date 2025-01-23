@@ -7,6 +7,7 @@ class AuthorGetResponse(BaseModel):
     Pydantic-модель, описывающая ответ на получение автора
     """
 
+    id: int
     name: str
     bio: str
     birthday: date
